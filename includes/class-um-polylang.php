@@ -164,10 +164,14 @@ class UM_Polylang {
                         }
                 }
 
-                if ( empty( $lang ) || 'all' === $lang ) {
-                        $locale = determine_locale();
-                        $lang   = substr( $locale, 0, 2 );
-                }
+               if ( empty( $lang ) || 'all' === $lang ) {
+                       $lang = pll_default_language();
+               }
+
+               if ( empty( $lang ) || 'all' === $lang ) {
+                       $locale = determine_locale();
+                       $lang   = substr( $locale, 0, 2 );
+               }
                 $language = PLL()->model->get_language( $lang );
 
                 return is_object( $language ) ? $language->get_prop( $field ) : $lang;
