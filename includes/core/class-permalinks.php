@@ -264,12 +264,19 @@ class Permalinks {
                                return $is_core_page;
                        }
 
+                       $language = pll_get_post_language( $queried_id, 'slug' );
+                       if ( empty( $language ) ) {
+                               $language = UM()->Polylang()->get_current();
+                       }
+                       if ( empty( $language ) ) {
+                               return $is_core_page;
+                       }
+
                        $permalinks = UM()->config()->permalinks;
                        if ( empty( $permalinks ) || ! is_array( $permalinks ) ) {
                                return $is_core_page;
                        }
 
-                       $language   = UM()->Polylang()->get_current();
                        $candidates = array();
 
                        if ( ! empty( $slug ) && isset( $permalinks[ $slug ] ) ) {
