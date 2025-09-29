@@ -158,6 +158,13 @@ class UM_Polylang {
                 }
 
                 if ( empty( $lang ) || 'all' === $lang ) {
+                        $request_lang = $this->detect_language_from_request();
+                        if ( $request_lang ) {
+                                $lang = $request_lang;
+                        }
+                }
+
+                if ( empty( $lang ) || 'all' === $lang ) {
                         $locale = determine_locale();
                         $lang   = substr( $locale, 0, 2 );
                 }
@@ -183,13 +190,57 @@ class UM_Polylang {
                         $referer = wp_unslash( $_SERVER['HTTP_REFERER'] );
                 }
 
-                if ( empty( $referer ) ) {
+                return $this->detect_language_from_url( $referer );
+        }
+
+
+        /**
+         * Try to determine the current language from the current request.
+         *
+         * @since 1.2.3
+         *
+         * @return string Language slug if detected, otherwise an empty string.
+         */
+        protected function detect_language_from_request() {
+                if ( function_exists( 'get_queried_object_id' ) ) {
+                        $post_id = get_queried_object_id();
+                        if ( $post_id ) {
+                                $language = pll_get_post_language( $post_id, 'slug' );
+                                if ( $language ) {
+                                        return $language;
+                                }
+                        }
+                }
+
+                $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+                if ( empty( $request_uri ) ) {
                         return '';
                 }
 
-                $referer = esc_url_raw( $referer );
+                $request_uri = strtok( $request_uri, '#' );
 
-                $post_id = url_to_postid( $referer );
+                $url = home_url( $request_uri );
+
+                return $this->detect_language_from_url( $url );
+        }
+
+
+        /**
+         * Extract the language from a provided URL.
+         *
+         * @since 1.2.3
+         *
+         * @param string $url URL to inspect.
+         * @return string Language slug if detected, otherwise an empty string.
+         */
+        protected function detect_language_from_url( $url ) {
+                if ( empty( $url ) ) {
+                        return '';
+                }
+
+                $url = esc_url_raw( $url );
+
+                $post_id = url_to_postid( $url );
                 if ( $post_id ) {
                         $language = pll_get_post_language( $post_id, 'slug' );
                         if ( $language ) {
@@ -197,7 +248,7 @@ class UM_Polylang {
                         }
                 }
 
-                $path = wp_parse_url( $referer, PHP_URL_PATH );
+                $path = wp_parse_url( $url, PHP_URL_PATH );
                 if ( empty( $path ) ) {
                         return '';
                 }
