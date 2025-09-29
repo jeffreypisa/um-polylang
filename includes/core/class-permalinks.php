@@ -477,15 +477,13 @@ class Permalinks {
          * @since 1.2.3
          */
         public function sync_current_language_permalinks() {
-                if ( UM()->Polylang()->is_default() ) {
-                        return;
-                }
-
                 $language = UM()->Polylang()->get_current();
 
                 if ( empty( $language ) || $language === $this->synced_language ) {
                         return;
                 }
+
+                $default_language = UM()->Polylang()->get_default();
 
                 if ( empty( UM()->config()->permalinks ) || ! is_array( UM()->config()->permalinks ) ) {
                         return;
@@ -498,19 +496,30 @@ class Permalinks {
                                 continue;
                         }
 
-                        $translated_id = (int) pll_get_post( $page_id, $language );
+                        $default_page_id = (int) pll_get_post( $page_id, $default_language );
 
-                        if ( ! $translated_id ) {
-                                UM()->Polylang()->log_debug(
-                                        'Missing translation for Ultimate Member core page.',
-                                        array(
-                                                'language' => $language,
-                                                'slug'     => $slug,
-                                                'page_id'  => $page_id,
-                                        )
-                                );
+                        if ( ! $default_page_id ) {
+                                $default_page_id = $page_id;
+                        }
 
-                                continue;
+                        if ( $language === $default_language ) {
+                                $translated_id = $default_page_id;
+                        } else {
+                                $translated_id = (int) pll_get_post( $default_page_id, $language );
+
+                                if ( ! $translated_id ) {
+                                        UM()->Polylang()->log_debug(
+                                                'Missing translation for Ultimate Member core page.',
+                                                array(
+                                                        'language'         => $language,
+                                                        'slug'             => $slug,
+                                                        'default_page_id'  => $default_page_id,
+                                                        'stored_page_id'   => $page_id,
+                                                )
+                                        );
+
+                                        continue;
+                                }
                         }
 
                         $this->set_core_page_id( $slug, $translated_id );
@@ -520,7 +529,7 @@ class Permalinks {
                                 array(
                                         'language'      => $language,
                                         'slug'          => $slug,
-                                        'default_page'  => $page_id,
+                                        'default_page'  => $default_page_id,
                                         'translated_id' => $translated_id,
                                 )
                         );
