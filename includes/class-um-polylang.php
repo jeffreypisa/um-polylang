@@ -158,14 +158,14 @@ class UM_Polylang {
                }
 
                if ( empty( $lang ) || 'all' === $lang ) {
+                       $lang = pll_default_language();
+               }
+
+               if ( empty( $lang ) || 'all' === $lang ) {
                        $referer_lang = $this->detect_language_from_referer();
                        if ( $referer_lang ) {
                                $lang = $referer_lang;
                        }
-               }
-
-               if ( empty( $lang ) || 'all' === $lang ) {
-                       $lang = pll_default_language();
                }
 
                if ( empty( $lang ) || 'all' === $lang ) {
