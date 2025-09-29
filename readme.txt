@@ -11,7 +11,7 @@ Requires at least: 6.5
 Tested up to: 6.7.1
 Requires UM core at least: 2.6.8
 Tested UM core up to: 2.9.2
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 
 == Description ==
 
@@ -31,7 +31,7 @@ Integrates the "Ultimate Member" plugin with the "Polylang" plugin. Makes UM mul
 == Installation ==
 
 Note: This plugin requires the "Ultimate Member" and "Polylang" plugins to be installed first.
-Note: This plugin is designed to integrate with the "Polylang" plugin, do not use it with the "Polylang PRO" plugin.
+Note: This plugin integrates with both the "Polylang" and "Polylang Pro" plugins.
 
 You can install this plugin from the ZIP file as any other plugin.
 Download ZIP file from GitHub or Google Drive. You can find download links here: https://github.com/umdevelopera/um-polylang
@@ -44,6 +44,12 @@ Open new issue in the GitHub repository if you are facing a problem or have a su
 Documentation is the README section in the GitHub repository: https://github.com/umdevelopera/um-polylang
 
 == Changelog ==
+
+= 1.2.3: February 20, 2025 =
+
+* Enhancements:
+
+        - Added compatibility checks for Polylang Pro so the extension works with either Polylang edition.
 
 = 1.2.2: February 9, 2025 =
 

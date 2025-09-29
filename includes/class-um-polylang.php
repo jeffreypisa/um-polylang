@@ -231,9 +231,13 @@ class UM_Polylang {
 	 *
 	 * @return boolean
 	 */
-	public function is_active() {
-		return defined( 'POLYLANG_VERSION' ) && function_exists( 'PLL' );
-	}
+        public function is_active() {
+                if ( function_exists( 'um_polylang_is_polylang_active' ) ) {
+                        return um_polylang_is_polylang_active();
+                }
+
+                return function_exists( 'PLL' ) && ( defined( 'POLYLANG_VERSION' ) || defined( 'POLYLANG_PRO_VERSION' ) );
+        }
 
 
 	/**

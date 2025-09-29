@@ -17,7 +17,7 @@ Integrates the **Ultimate Member** plugin with the **Polylang** plugin. Makes Ul
 
 __Note:__ This plugin requires the [Ultimate Member](https://wordpress.org/plugins/ultimate-member/) and [Polylang](https://wordpress.org/plugins/polylang/) plugins to be installed first.
 
-__Note:__ This plugin is designed to integrate with the "Polylang" plugin, do not use it with the "Polylang PRO" plugin.
+__Note:__ This plugin integrates with both the "Polylang" and "Polylang Pro" plugins.
 
 ### How to install from GitHub
 

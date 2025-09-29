@@ -8,11 +8,11 @@
  * Text Domain: um-polylang
  * Domain Path: /languages
  *
- * Requires Plugins: ultimate-member, polylang
+ * Requires Plugins: ultimate-member
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * UM version: 2.9.2
- * Version: 1.2.2
+ * Version: 1.2.3
  *
  * @package um_ext\um_polylang
  */
@@ -31,10 +31,30 @@ define( 'um_polylang_version', $plugin_data['Version'] );
 define( 'um_polylang_textdomain', 'um-polylang' );
 
 
+if ( ! function_exists( 'um_polylang_is_polylang_active' ) ) {
+        /**
+         * Determine if either Polylang (free) or Polylang Pro is active.
+         *
+         * The WordPress plugin dependency header only recognises plugins hosted
+         * on WordPress.org, so Polylang Pro cannot satisfy the dependency
+         * automatically. We therefore perform a manual detection by checking for
+         * the shared helper function and version constants that both editions
+         * expose.
+         *
+         * @since 1.2.3
+         *
+         * @return bool
+         */
+        function um_polylang_is_polylang_active() {
+                return function_exists( 'PLL' ) && ( defined( 'POLYLANG_VERSION' ) || defined( 'POLYLANG_PRO_VERSION' ) );
+        }
+}
+
+
 // Activation script.
 if ( ! function_exists( 'um_polylang_activation_hook' ) ) {
-	function um_polylang_activation_hook() {
-		if ( function_exists( 'UM' ) && function_exists( 'pll_languages_list' ) ) {
+        function um_polylang_activation_hook() {
+                if ( function_exists( 'UM' ) && um_polylang_is_polylang_active() ) {
 			require_once 'includes/admin/class-pll.php';
 			require_once 'includes/core/class-setup.php';
 			if ( class_exists( 'um_ext\um_polylang\core\Setup' ) ) {
@@ -59,15 +79,15 @@ if ( ! function_exists( 'um_polylang_check_dependencies' ) ) {
 					echo '<div class="error"><p>' . wp_kses_post( sprintf( __( 'The <strong>%s</strong> extension requires the Ultimate Member plugin to be activated to work properly. You can download it <a href="https://wordpress.org/plugins/ultimate-member">here</a>', 'um-polylang' ), um_polylang_extension ) ) . '</p></div>';
 				}
 			);
-		} elseif ( ! defined( 'POLYLANG_VERSION' ) ) {
-			// Polylang is not active.
-			add_action(
-				'admin_notices',
-				function () {
-					// translators: %s - plugin name.
-					echo '<div class="error"><p>' . wp_kses_post( sprintf( __( 'The <strong>%s</strong> extension requires the Polylang plugin to be activated to work properly. You can download it <a href="https://wordpress.org/plugins/polylang/">here</a>', 'um-polylang' ), um_polylang_extension ) ) . '</p></div>';
-				}
-			);
+                } elseif ( ! um_polylang_is_polylang_active() ) {
+                        // Polylang (free or pro) is not active.
+                        add_action(
+                                'admin_notices',
+                                function () {
+                                        // translators: %s - plugin name.
+                                        echo '<div class="error"><p>' . wp_kses_post( sprintf( __( 'The <strong>%s</strong> extension requires either the Polylang or Polylang Pro plugin to be activated to work properly.', 'um-polylang' ), um_polylang_extension ) ) . '</p></div>';
+                                }
+                        );
 		} else {
 			require_once 'includes/class-um-polylang.php';
 			UM()->set_class( 'Polylang', true );
