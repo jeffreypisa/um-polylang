@@ -348,15 +348,37 @@ class UM_Polylang {
         }
 
 
-	/**
-	 * Check if the default language is chosen.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @return boolean
-	 */
-	public function is_default() {
-		return $this->get_current() === $this->get_default();
-	}
+        /**
+         * Check if the default language is chosen.
+         *
+         * @since 1.0.0
+         *
+         * @return boolean
+         */
+        public function is_default() {
+                return $this->get_current() === $this->get_default();
+        }
+
+        /**
+         * Log debugging information when debugging is enabled.
+         *
+         * @since 1.2.3
+         *
+         * @param string $message Debug message.
+         * @param array  $context Additional context to include in the log entry.
+         */
+        public function log_debug( $message, array $context = array() ) {
+                $enabled = apply_filters( 'um_polylang_enable_debug', defined( 'WP_DEBUG' ) && WP_DEBUG );
+
+                if ( ! $enabled ) {
+                        return;
+                }
+
+                if ( ! empty( $context ) ) {
+                        $message .= ' ' . wp_json_encode( $context );
+                }
+
+                error_log( '[UM Polylang] ' . $message );
+        }
 
 }

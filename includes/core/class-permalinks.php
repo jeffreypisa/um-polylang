@@ -15,15 +15,27 @@ defined( 'ABSPATH' ) || exit;
  */
 class Permalinks {
 
-	public $is_switcher = false;
+        public $is_switcher = false;
+
+        /**
+         * Track the language we have already synchronized core pages for.
+         *
+         * @since 1.2.3
+         *
+         * @var string
+         */
+        protected $synced_language = '';
 
 	/**
 	 * Class constructor.
 	 */
-	public function __construct() {
+        public function __construct() {
 
-		// Add rewrite rules for the Account and User page.
-		add_filter( 'rewrite_rules_array', array( &$this, 'add_rewrite_rules' ), 10, 1 );
+                // Keep Ultimate Member core page IDs aligned with the current language.
+                add_action( 'init', array( $this, 'sync_current_language_permalinks' ), 5 );
+
+                // Add rewrite rules for the Account and User page.
+                add_filter( 'rewrite_rules_array', array( &$this, 'add_rewrite_rules' ), 10, 1 );
 
                 // Treat translated Ultimate Member core pages as real core pages.
                 add_filter( 'um_is_core_page', array( $this, 'maybe_recognize_translated_core_page' ), 10, 3 );
@@ -160,25 +172,17 @@ class Permalinks {
                         return $is_core;
                 }
 
-               if ( empty( $slug ) ) {
+                if ( empty( $slug ) ) {
                         return $is_core;
                 }
 
-               $permalinks = UM()->config()->permalinks;
-               $slug_key   = $slug;
+                $this->sync_current_language_permalinks();
 
-               if ( empty( $permalinks[ $slug_key ] ) && false !== strpos( $slug, '-' ) ) {
-                       $normalized = str_replace( '-', '_', $slug );
-                       if ( ! empty( $permalinks[ $normalized ] ) ) {
-                               $slug_key = $normalized;
-                       }
-               }
+                list( $stored_slug, $default_page_id ) = $this->get_core_page_details( $slug );
 
-               if ( empty( $permalinks[ $slug_key ] ) ) {
-                       return $is_core;
-               }
-
-               $default_page_id = (int) $permalinks[ $slug_key ];
+                if ( ! $default_page_id ) {
+                        return $is_core;
+                }
                 $language        = UM()->Polylang()->get_current();
                 $translated_id   = (int) pll_get_post( $default_page_id, $language );
 
@@ -194,11 +198,11 @@ class Permalinks {
                         return $is_core;
                 }
 
-               UM()->config()->permalinks[ $slug_key ] = $translated_id;
+                $this->set_core_page_id( $stored_slug ? $stored_slug : $slug, $translated_id );
 
-               if ( $slug_key !== $slug ) {
-                       UM()->config()->permalinks[ $slug ] = $translated_id;
-               }
+                if ( $stored_slug && $stored_slug !== $slug ) {
+                        $this->set_core_page_id( $slug, $translated_id );
+                }
 
                 return true;
         }
@@ -347,16 +351,23 @@ class Permalinks {
 	 * @param  string $updated Additional parameter 'updated' value.
 	 * @return string
 	 */
-	public function localize_core_page_url( $url, $slug, $updated = '' ) {
-		if ( ! UM()->Polylang()->is_default() ) {
-			$page_id = UM()->config()->permalinks[ $slug ];
-			$url     = $this->get_page_url_for_language( $page_id, UM()->Polylang()->get_current() );
-			if ( $updated ) {
-				$url = add_query_arg( 'updated', esc_attr( $updated ), $url );
-			}
-		}
-		return $url;
-	}
+        public function localize_core_page_url( $url, $slug, $updated = '' ) {
+                if ( ! UM()->Polylang()->is_default() ) {
+                        $page_id = $this->get_core_page_id( $slug );
+
+                        if ( ! $page_id ) {
+                                return $url;
+                        }
+
+                        $url = $this->get_page_url_for_language( $page_id, UM()->Polylang()->get_current() );
+
+                        if ( $updated ) {
+                                $url = add_query_arg( 'updated', esc_attr( $updated ), $url );
+                        }
+                }
+
+                return $url;
+        }
 
 
 	/**
@@ -451,13 +462,145 @@ class Permalinks {
 	 * @param bool   $updated Additional parameter.
 	 * @return string Password reset page URL.
 	 */
-	public function localize_reset_url( $url, $slug, $updated ) {
-		if ( 'password-reset' === $slug && false === $updated ) {
-			if ( ! UM()->Polylang()->is_default() ) {
-				$url = add_query_arg( 'lang', UM()->Polylang()->get_current(), $url );
-			}
-		}
-		return $url;
-	}
+        public function localize_reset_url( $url, $slug, $updated ) {
+                if ( 'password-reset' === $slug && false === $updated ) {
+                        if ( ! UM()->Polylang()->is_default() ) {
+                                $url = add_query_arg( 'lang', UM()->Polylang()->get_current(), $url );
+                        }
+                }
+                return $url;
+        }
+
+        /**
+         * Ensure Ultimate Member's stored core page IDs use the current language translation.
+         *
+         * @since 1.2.3
+         */
+        public function sync_current_language_permalinks() {
+                if ( UM()->Polylang()->is_default() ) {
+                        return;
+                }
+
+                $language = UM()->Polylang()->get_current();
+
+                if ( empty( $language ) || $language === $this->synced_language ) {
+                        return;
+                }
+
+                if ( empty( UM()->config()->permalinks ) || ! is_array( UM()->config()->permalinks ) ) {
+                        return;
+                }
+
+                foreach ( UM()->config()->permalinks as $slug => $page_id ) {
+                        $page_id = (int) $page_id;
+
+                        if ( ! $page_id ) {
+                                continue;
+                        }
+
+                        $translated_id = (int) pll_get_post( $page_id, $language );
+
+                        if ( ! $translated_id ) {
+                                UM()->Polylang()->log_debug(
+                                        'Missing translation for Ultimate Member core page.',
+                                        array(
+                                                'language' => $language,
+                                                'slug'     => $slug,
+                                                'page_id'  => $page_id,
+                                        )
+                                );
+
+                                continue;
+                        }
+
+                        $this->set_core_page_id( $slug, $translated_id );
+
+                        UM()->Polylang()->log_debug(
+                                'Synchronized Ultimate Member core page for language.',
+                                array(
+                                        'language'      => $language,
+                                        'slug'          => $slug,
+                                        'default_page'  => $page_id,
+                                        'translated_id' => $translated_id,
+                                )
+                        );
+                }
+
+                $this->synced_language = $language;
+        }
+
+        /**
+         * Get the current language aware core page ID for a given slug.
+         *
+         * @since 1.2.3
+         *
+         * @param string $slug Core page slug.
+         * @return int
+         */
+        protected function get_core_page_id( $slug ) {
+                list( , $page_id ) = $this->get_core_page_details( $slug );
+
+                return $page_id;
+        }
+
+        /**
+         * Locate the stored permalink entry for a slug.
+         *
+         * @since 1.2.3
+         *
+         * @param string $slug Core page slug.
+         * @return array Array containing the stored slug key and the associated page ID.
+         */
+        protected function get_core_page_details( $slug ) {
+                if ( empty( UM()->config()->permalinks ) || ! is_array( UM()->config()->permalinks ) ) {
+                        return array( '', 0 );
+                }
+
+                if ( isset( UM()->config()->permalinks[ $slug ] ) ) {
+                        return array( $slug, (int) UM()->config()->permalinks[ $slug ] );
+                }
+
+                $alternate = '';
+
+                if ( false !== strpos( $slug, '-' ) ) {
+                        $alternate = str_replace( '-', '_', $slug );
+                } elseif ( false !== strpos( $slug, '_' ) ) {
+                        $alternate = str_replace( '_', '-', $slug );
+                }
+
+                if ( $alternate && isset( UM()->config()->permalinks[ $alternate ] ) ) {
+                        return array( $alternate, (int) UM()->config()->permalinks[ $alternate ] );
+                }
+
+                return array( '', 0 );
+        }
+
+        /**
+         * Store a page ID for both the canonical and alternate representations of a core page slug.
+         *
+         * @since 1.2.3
+         *
+         * @param string $slug    Core page slug key.
+         * @param int    $page_id Page ID to store.
+         */
+        protected function set_core_page_id( $slug, $page_id ) {
+                if ( empty( $slug ) || ! $page_id ) {
+                        return;
+                }
+
+                UM()->config()->permalinks[ $slug ] = (int) $page_id;
+
+                if ( false !== strpos( $slug, '-' ) ) {
+                        $alternate = str_replace( '-', '_', $slug );
+                } elseif ( false !== strpos( $slug, '_' ) ) {
+                        $alternate = str_replace( '_', '-', $slug );
+                } else {
+                        $alternate = '';
+                }
+
+                if ( $alternate ) {
+                        UM()->config()->permalinks[ $alternate ] = (int) $page_id;
+                }
+        }
 
 }
