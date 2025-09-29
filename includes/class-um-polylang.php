@@ -145,33 +145,51 @@ class UM_Polylang {
 	 */
 	public function get_current( $field = 'slug' ) {
 
-                $lang = pll_current_language();
+                $lang = '';
+
                 if ( isset( $_GET['lang'] ) ) {
                         $lang = sanitize_key( $_GET['lang'] );
                 }
 
-               if ( empty( $lang ) || 'all' === $lang ) {
-                       $request_lang = $this->detect_language_from_request();
-                       if ( $request_lang ) {
-                               $lang = $request_lang;
-                       }
-               }
+                if ( empty( $lang ) || 'all' === $lang ) {
+                        $request_lang = $this->detect_language_from_request();
 
-               if ( empty( $lang ) || 'all' === $lang ) {
-                       $lang = pll_default_language();
-               }
+                        if ( $request_lang ) {
+                                $lang = $request_lang;
+                        }
+                }
 
-               if ( empty( $lang ) || 'all' === $lang ) {
-                       $referer_lang = $this->detect_language_from_referer();
-                       if ( $referer_lang ) {
-                               $lang = $referer_lang;
-                       }
-               }
+                if ( empty( $lang ) || 'all' === $lang ) {
+                        $lang = pll_current_language();
+                } else {
+                        $current_lang = pll_current_language();
 
-               if ( empty( $lang ) || 'all' === $lang ) {
-                       $locale = determine_locale();
-                       $lang   = substr( $locale, 0, 2 );
-               }
+                        if ( $current_lang && $current_lang !== $lang ) {
+                                $this->log_debug(
+                                        'Override Polylang current language with request language.',
+                                        array(
+                                                'polylang' => $current_lang,
+                                                'request'  => $lang,
+                                        )
+                                );
+                        }
+                }
+
+                if ( empty( $lang ) || 'all' === $lang ) {
+                        $lang = pll_default_language();
+                }
+
+                if ( empty( $lang ) || 'all' === $lang ) {
+                        $referer_lang = $this->detect_language_from_referer();
+                        if ( $referer_lang ) {
+                                $lang = $referer_lang;
+                        }
+                }
+
+                if ( empty( $lang ) || 'all' === $lang ) {
+                        $locale = determine_locale();
+                        $lang   = substr( $locale, 0, 2 );
+                }
                 $language = PLL()->model->get_language( $lang );
 
                 return is_object( $language ) ? $language->get_prop( $field ) : $lang;
