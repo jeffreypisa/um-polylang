@@ -150,19 +150,19 @@ class UM_Polylang {
                         $lang = sanitize_key( $_GET['lang'] );
                 }
 
-                if ( empty( $lang ) || 'all' === $lang ) {
-                        $referer_lang = $this->detect_language_from_referer();
-                        if ( $referer_lang ) {
-                                $lang = $referer_lang;
-                        }
-                }
+               if ( empty( $lang ) || 'all' === $lang ) {
+                       $request_lang = $this->detect_language_from_request();
+                       if ( $request_lang ) {
+                               $lang = $request_lang;
+                       }
+               }
 
-                if ( empty( $lang ) || 'all' === $lang ) {
-                        $request_lang = $this->detect_language_from_request();
-                        if ( $request_lang ) {
-                                $lang = $request_lang;
-                        }
-                }
+               if ( empty( $lang ) || 'all' === $lang ) {
+                       $referer_lang = $this->detect_language_from_referer();
+                       if ( $referer_lang ) {
+                               $lang = $referer_lang;
+                       }
+               }
 
                if ( empty( $lang ) || 'all' === $lang ) {
                        $lang = pll_default_language();
