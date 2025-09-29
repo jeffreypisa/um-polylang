@@ -25,8 +25,11 @@ class Permalinks {
 		// Add rewrite rules for the Account and User page.
 		add_filter( 'rewrite_rules_array', array( &$this, 'add_rewrite_rules' ), 10, 1 );
 
-		// Links in emails.
-		add_action( 'um_before_email_notification_sending', array( $this, 'before_email' ) );
+                // Treat translated Ultimate Member core pages as real core pages.
+                add_filter( 'um_is_core_page', array( $this, 'maybe_recognize_translated_core_page' ), 10, 3 );
+
+                // Links in emails.
+                add_action( 'um_before_email_notification_sending', array( $this, 'before_email' ) );
 
 		// Pages.
 		add_filter( 'um_get_core_page_filter', array( &$this, 'localize_core_page_url' ), 10, 3 );
@@ -137,12 +140,55 @@ class Permalinks {
 
 		// Localize {password_reset_link}.
 		add_filter( 'um_get_core_page_filter', array( $this, 'localize_reset_url' ), 10, 3 );
-	}
+        }
 
 
-	/**
-	 * Filter links in the language switcher.
-	 *
+        /**
+         * Make sure Ultimate Member recognises translated core pages as core pages.
+         *
+         * @hooked um_is_core_page
+         *
+         * @since 1.2.3
+         *
+         * @param bool        $is_core Whether Ultimate Member already considers the page a core page.
+         * @param string      $slug    The core page slug (login, register, reset_password, etc.).
+         * @param int|string  $page_id Optional page ID Ultimate Member is checking against.
+         * @return bool
+         */
+        public function maybe_recognize_translated_core_page( $is_core, $slug, $page_id = 0 ) {
+                if ( $is_core || UM()->Polylang()->is_default() ) {
+                        return $is_core;
+                }
+
+                if ( empty( $slug ) || empty( UM()->config()->permalinks[ $slug ] ) ) {
+                        return $is_core;
+                }
+
+                $default_page_id = (int) UM()->config()->permalinks[ $slug ];
+                $language        = UM()->Polylang()->get_current();
+                $translated_id   = (int) pll_get_post( $default_page_id, $language );
+
+                if ( ! $translated_id ) {
+                        return $is_core;
+                }
+
+                if ( empty( $page_id ) ) {
+                        $page_id = get_queried_object_id();
+                }
+
+                if ( (int) $page_id !== $translated_id ) {
+                        return $is_core;
+                }
+
+                UM()->config()->permalinks[ $slug ] = $translated_id;
+
+                return true;
+        }
+
+
+        /**
+         * Filter links in the language switcher.
+         *
 	 * @since   1.0.1
 	 * @version 1.1.0 static method `update_core_pages` removed.
 	 *
