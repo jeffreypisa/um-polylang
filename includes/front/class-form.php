@@ -37,7 +37,7 @@ class Form {
 	public function shortcode_atts_ultimatemember( $args ){
 		if ( isset( $args['form_id'] ) ) {
 			$form_id            = absint( $args['form_id'] );
-			$translated_form_id = pll_get_post( $form_id, pll_current_language() );
+                        $translated_form_id = pll_get_post( $form_id, UM()->Polylang()->get_current() );
 
 			if ( $translated_form_id && $translated_form_id !== $form_id ) {
 				$args['form_id'] = $translated_form_id;

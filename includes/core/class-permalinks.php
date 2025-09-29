@@ -265,7 +265,7 @@ class Permalinks {
 	public function localize_core_page_link( $link, $post_id ) {
 		if ( is_array( UM()->config()->permalinks ) && in_array( $post_id, UM()->config()->permalinks, true ) && ! $this->is_switcher && ! UM()->Polylang()->is_default() ) {
 			$url  = $this->get_page_url_for_language( $post_id, UM()->Polylang()->get_current() );
-			$link = ( $link !== $url ) ? $url : add_query_arg( 'lang', pll_current_language(), $url );
+                        $link = ( $link !== $url ) ? $url : add_query_arg( 'lang', UM()->Polylang()->get_current(), $url );
 		}
 		return $link;
 	}
