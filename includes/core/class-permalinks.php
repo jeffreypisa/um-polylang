@@ -502,6 +502,10 @@ class Permalinks {
          */
         public function sync_current_language_permalinks( $language = null ) {
                 if ( empty( $language ) ) {
+                        $language = UM()->Polylang()->get_request_language();
+                }
+
+                if ( empty( $language ) ) {
                         $language = UM()->Polylang()->get_current();
                 }
 

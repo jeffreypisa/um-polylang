@@ -10,6 +10,15 @@ defined( 'ABSPATH' ) || exit;
  */
 class UM_Polylang {
 
+	/**
+	 * Cached request language for the current page load.
+	 *
+	 * @since 1.2.3
+	 *
+	 * @var string|null
+	 */
+	protected $request_language = null;
+
 
 	/**
 	 * An instance of the class.
@@ -36,6 +45,8 @@ class UM_Polylang {
 	 * Class constructor.
 	 */
 	public function __construct() {
+
+                add_action( 'wp', array( $this, 'prime_request_language' ), 1 );
 
 		$this->core();
 		if ( UM()->is_request( 'admin' ) ) {
@@ -152,7 +163,7 @@ class UM_Polylang {
                 }
 
                 if ( empty( $lang ) || 'all' === $lang ) {
-                        $request_lang = $this->detect_language_from_request();
+                        $request_lang = $this->get_request_language();
 
                         if ( $request_lang ) {
                                 $lang = $request_lang;
@@ -197,6 +208,78 @@ class UM_Polylang {
 
 
         /**
+         * Determine and cache the current request language once the main query is available.
+         *
+         * @since 1.2.3
+         */
+        public function prime_request_language() {
+                if ( null !== $this->request_language && '' !== $this->request_language ) {
+                        return;
+                }
+
+                $language = '';
+
+                if ( function_exists( 'get_queried_object_id' ) ) {
+                        $post_id = get_queried_object_id();
+
+                        if ( $post_id ) {
+                                $language = pll_get_post_language( $post_id, 'slug' );
+                        }
+                }
+
+                if ( empty( $language ) ) {
+                        global $post;
+
+                        if ( $post instanceof \WP_Post ) {
+                                $language = pll_get_post_language( $post->ID, 'slug' );
+                        }
+                }
+
+                if ( empty( $language ) ) {
+                        $language = $this->detect_language_from_request();
+                }
+
+                if ( empty( $language ) ) {
+                        $language = pll_current_language();
+                }
+
+                if ( empty( $language ) || 'all' === $language ) {
+                        $language = '';
+                }
+
+                $this->request_language = $language;
+
+                if ( $language ) {
+                        $permalinks = UM()->Polylang()->core()->permalinks();
+
+                        if ( method_exists( $permalinks, 'sync_current_language_permalinks' ) ) {
+                                $permalinks->sync_current_language_permalinks( $language );
+                        }
+                }
+        }
+
+
+        /**
+         * Return the detected language for the current request.
+         *
+         * @since 1.2.3
+         *
+         * @return string Language slug when detected, otherwise an empty string.
+         */
+        public function get_request_language() {
+                if ( null === $this->request_language ) {
+                        $this->request_language = $this->detect_language_from_request();
+
+                        if ( empty( $this->request_language ) || 'all' === $this->request_language ) {
+                                $this->request_language = '';
+                        }
+                }
+
+                return $this->request_language ? $this->request_language : '';
+        }
+
+
+        /**
          * Try to determine the current language from the referring URL.
          *
          * @since 1.2.3
@@ -224,26 +307,46 @@ class UM_Polylang {
          * @return string Language slug if detected, otherwise an empty string.
          */
         protected function detect_language_from_request() {
+                $language = '';
+
                 if ( function_exists( 'get_queried_object_id' ) ) {
                         $post_id = get_queried_object_id();
                         if ( $post_id ) {
                                 $language = pll_get_post_language( $post_id, 'slug' );
+
                                 if ( $language ) {
                                         return $language;
                                 }
                         }
                 }
 
+                global $post;
+
+                if ( $post instanceof \WP_Post ) {
+                        $language = pll_get_post_language( $post->ID, 'slug' );
+
+                        if ( $language ) {
+                                return $language;
+                        }
+                }
+
                 $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+
                 if ( empty( $request_uri ) ) {
-                        return '';
+                        return pll_default_language();
                 }
 
                 $request_uri = strtok( $request_uri, '#' );
 
                 $url = home_url( $request_uri );
 
-                return $this->detect_language_from_url( $url );
+                $language = $this->detect_language_from_url( $url );
+
+                if ( empty( $language ) ) {
+                        $language = pll_default_language();
+                }
+
+                return $language;
         }
 
 
@@ -378,7 +481,20 @@ class UM_Polylang {
          * @return boolean
          */
         public function is_default() {
-                return $this->get_current() === $this->get_default();
+                $default = $this->get_default();
+                $request = $this->get_request_language();
+
+                if ( $request ) {
+                        return $request === $default;
+                }
+
+                $current = $this->get_current();
+
+                if ( $current ) {
+                        return $current === $default;
+                }
+
+                return true;
         }
 
         /**
