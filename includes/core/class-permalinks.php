@@ -168,7 +168,7 @@ class Permalinks {
          * @return bool
          */
         public function maybe_recognize_translated_core_page( $is_core, $slug, $page_id = 0 ) {
-                if ( $is_core || UM()->Polylang()->is_default() ) {
+                if ( $is_core ) {
                         return $is_core;
                 }
 
@@ -176,15 +176,39 @@ class Permalinks {
                         return $is_core;
                 }
 
-                $this->sync_current_language_permalinks();
+                $language = '';
+
+                if ( $page_id ) {
+                        $language = pll_get_post_language( (int) $page_id, 'slug' );
+                }
+
+                if ( empty( $language ) ) {
+                        $queried_id = get_queried_object_id();
+
+                        if ( $queried_id ) {
+                                $language = pll_get_post_language( $queried_id, 'slug' );
+                        }
+                }
+
+                if ( empty( $language ) ) {
+                        $language = UM()->Polylang()->get_current();
+                }
+
+                $default_language = UM()->Polylang()->get_default();
+
+                if ( empty( $language ) || $language === $default_language ) {
+                        return $is_core;
+                }
+
+                $this->sync_current_language_permalinks( $language );
 
                 list( $stored_slug, $default_page_id ) = $this->get_core_page_details( $slug );
 
                 if ( ! $default_page_id ) {
                         return $is_core;
                 }
-                $language        = UM()->Polylang()->get_current();
-                $translated_id   = (int) pll_get_post( $default_page_id, $language );
+
+                $translated_id = (int) pll_get_post( $default_page_id, $language );
 
                 if ( ! $translated_id ) {
                         return $is_core;
@@ -476,8 +500,10 @@ class Permalinks {
          *
          * @since 1.2.3
          */
-        public function sync_current_language_permalinks() {
-                $language = UM()->Polylang()->get_current();
+        public function sync_current_language_permalinks( $language = null ) {
+                if ( empty( $language ) ) {
+                        $language = UM()->Polylang()->get_current();
+                }
 
                 if ( empty( $language ) || $language === $this->synced_language ) {
                         return;
