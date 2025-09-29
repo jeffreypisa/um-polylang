@@ -145,18 +145,75 @@ class UM_Polylang {
 	 */
 	public function get_current( $field = 'slug' ) {
 
-		$lang = pll_current_language();
-		if ( isset( $_GET['lang'] ) ) {
-			$lang = sanitize_key( $_GET['lang'] );
-		}
-		if ( empty( $lang ) || 'all' === $lang ) {
-			$locale = determine_locale();
-			$lang   = substr( $locale, 0, 2 );
-		}
-		$language = PLL()->model->get_language( $lang );
+                $lang = pll_current_language();
+                if ( isset( $_GET['lang'] ) ) {
+                        $lang = sanitize_key( $_GET['lang'] );
+                }
 
-		return is_object( $language ) ? $language->get_prop( $field ) : $lang;
-	}
+                if ( empty( $lang ) || 'all' === $lang ) {
+                        $referer_lang = $this->detect_language_from_referer();
+                        if ( $referer_lang ) {
+                                $lang = $referer_lang;
+                        }
+                }
+
+                if ( empty( $lang ) || 'all' === $lang ) {
+                        $locale = determine_locale();
+                        $lang   = substr( $locale, 0, 2 );
+                }
+                $language = PLL()->model->get_language( $lang );
+
+                return is_object( $language ) ? $language->get_prop( $field ) : $lang;
+        }
+
+
+        /**
+         * Try to determine the current language from the referring URL.
+         *
+         * @since 1.2.3
+         *
+         * @return string Language slug if detected, otherwise an empty string.
+         */
+        protected function detect_language_from_referer() {
+                $referer = '';
+
+                if ( isset( $_REQUEST['_wp_http_referer'] ) ) {
+                        $referer = wp_unslash( $_REQUEST['_wp_http_referer'] );
+                } elseif ( isset( $_SERVER['HTTP_REFERER'] ) ) {
+                        $referer = wp_unslash( $_SERVER['HTTP_REFERER'] );
+                }
+
+                if ( empty( $referer ) ) {
+                        return '';
+                }
+
+                $referer = esc_url_raw( $referer );
+
+                $post_id = url_to_postid( $referer );
+                if ( $post_id ) {
+                        $language = pll_get_post_language( $post_id, 'slug' );
+                        if ( $language ) {
+                                return $language;
+                        }
+                }
+
+                $path = wp_parse_url( $referer, PHP_URL_PATH );
+                if ( empty( $path ) ) {
+                        return '';
+                }
+
+                $segments  = array_filter( explode( '/', trim( $path, '/' ) ) );
+                $languages = pll_languages_list();
+
+                foreach ( $segments as $segment ) {
+                        $segment = sanitize_key( $segment );
+                        if ( in_array( $segment, $languages, true ) ) {
+                                return $segment;
+                        }
+                }
+
+                return '';
+        }
 
 
 	/**
