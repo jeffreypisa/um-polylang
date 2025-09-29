@@ -160,11 +160,25 @@ class Permalinks {
                         return $is_core;
                 }
 
-                if ( empty( $slug ) || empty( UM()->config()->permalinks[ $slug ] ) ) {
+               if ( empty( $slug ) ) {
                         return $is_core;
                 }
 
-                $default_page_id = (int) UM()->config()->permalinks[ $slug ];
+               $permalinks = UM()->config()->permalinks;
+               $slug_key   = $slug;
+
+               if ( empty( $permalinks[ $slug_key ] ) && false !== strpos( $slug, '-' ) ) {
+                       $normalized = str_replace( '-', '_', $slug );
+                       if ( ! empty( $permalinks[ $normalized ] ) ) {
+                               $slug_key = $normalized;
+                       }
+               }
+
+               if ( empty( $permalinks[ $slug_key ] ) ) {
+                       return $is_core;
+               }
+
+               $default_page_id = (int) $permalinks[ $slug_key ];
                 $language        = UM()->Polylang()->get_current();
                 $translated_id   = (int) pll_get_post( $default_page_id, $language );
 
@@ -180,7 +194,11 @@ class Permalinks {
                         return $is_core;
                 }
 
-                UM()->config()->permalinks[ $slug ] = $translated_id;
+               UM()->config()->permalinks[ $slug_key ] = $translated_id;
+
+               if ( $slug_key !== $slug ) {
+                       UM()->config()->permalinks[ $slug ] = $translated_id;
+               }
 
                 return true;
         }
