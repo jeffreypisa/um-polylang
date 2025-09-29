@@ -245,38 +245,57 @@ class Permalinks {
 		 * @param int    $page_id      Optional page ID supplied by the caller.
 		 * @return bool
 		 */
-		public function maybe_flag_translated_core_page( $is_core_page, $slug, $page_id = 0 ) {
-			if ( $is_core_page || UM()->Polylang()->is_default() ) {
-				return $is_core_page;
-			}
+               public function maybe_flag_translated_core_page( $is_core_page, $slug, $page_id = 0 ) {
+                       if ( $is_core_page || UM()->Polylang()->is_default() ) {
+                               return $is_core_page;
+                       }
 
-			if ( empty( UM()->config()->permalinks[ $slug ] ) ) {
-				return $is_core_page;
-			}
+                       $queried_id = get_queried_object_id();
+                       if ( ! $queried_id && $page_id ) {
+                               $queried_id = absint( $page_id );
+                       }
+                       if ( ! $queried_id ) {
+                               $queried_id = absint( get_query_var( 'page_id' ) );
+                       }
+                       if ( ! $queried_id && isset( $_REQUEST['page_id'] ) ) {
+                               $queried_id = absint( wp_unslash( $_REQUEST['page_id'] ) );
+                       }
+                       if ( ! $queried_id ) {
+                               return $is_core_page;
+                       }
 
-			$translated_page_id = pll_get_post( UM()->config()->permalinks[ $slug ], UM()->Polylang()->get_current() );
-			if ( ! $translated_page_id ) {
-				return $is_core_page;
-			}
+                       $permalinks = UM()->config()->permalinks;
+                       if ( empty( $permalinks ) || ! is_array( $permalinks ) ) {
+                               return $is_core_page;
+                       }
 
-			$queried_id = get_queried_object_id();
-			if ( ! $queried_id && $page_id ) {
-				$queried_id = absint( $page_id );
-			}
-			if ( ! $queried_id ) {
-				$queried_id = absint( get_query_var( 'page_id' ) );
-			}
-			if ( ! $queried_id && isset( $_REQUEST['page_id'] ) ) {
-				$queried_id = absint( wp_unslash( $_REQUEST['page_id'] ) );
-			}
+                       $language   = UM()->Polylang()->get_current();
+                       $candidates = array();
 
-			if ( $queried_id && (int) $translated_page_id === (int) $queried_id ) {
-				UM()->config()->permalinks[ $slug ] = (int) $translated_page_id;
-				return true;
-			}
+                       if ( ! empty( $slug ) && isset( $permalinks[ $slug ] ) ) {
+                               $candidates[ $slug ] = (int) $permalinks[ $slug ];
+                       } else {
+                               $candidates = array_map( 'intval', $permalinks );
+                       }
 
-			return $is_core_page;
-		}
+                       foreach ( $candidates as $candidate_slug => $core_page_id ) {
+                               if ( ! $core_page_id ) {
+                                       continue;
+                               }
+
+                               $translated_page_id = pll_get_post( $core_page_id, $language );
+                               if ( ! $translated_page_id ) {
+                                       continue;
+                               }
+
+                               if ( (int) $translated_page_id === (int) $queried_id ) {
+                                       UM()->config()->permalinks[ $candidate_slug ] = (int) $translated_page_id;
+                                       return true;
+                               }
+                       }
+
+                       return $is_core_page;
+               }
 
 
 		/**
