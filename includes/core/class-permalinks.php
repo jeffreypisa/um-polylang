@@ -32,6 +32,7 @@ class Permalinks {
 		add_filter( 'um_get_core_page_filter', array( &$this, 'localize_core_page_url' ), 10, 3 );
 		add_filter( 'um_profile_permalink', array( $this, 'localize_profile_permalink' ), 10, 3 );
 		add_filter( 'page_link', array( $this, 'localize_core_page_link' ), 10, 2 );
+		add_filter( 'um_is_core_page', array( $this, 'maybe_flag_translated_core_page' ), 10, 3 );
 
 		// Detect PLL shitcher.
 		add_filter( 'pll_the_languages_args', function( $args ) {
@@ -232,23 +233,69 @@ class Permalinks {
 	}
 
 
-	/**
-	 * Filter account activation link.
-	 * Hook: um_activate_url
-	 *
-	 * @see \um\core\Permalinks
-	 *
-	 * @since 1.1.0
-	 *
-	 * @param string $url Account activation link.
-	 * @return string Localized account activation link.
-	 */
-	public function localize_activate_url( $url ){
-		if ( ! UM()->Polylang()->is_default() ) {
-			$url = add_query_arg( 'lang', UM()->Polylang()->get_current(), $url );
+		/**
+		 * Ensure translated pages are recognised as UM core pages.
+		 *
+		 * @hooked um_is_core_page
+		 *
+		 * @since 1.2.3
+		 *
+		 * @param bool   $is_core_page Whether the page is already considered core.
+		 * @param string $slug         Core page slug being checked.
+		 * @param int    $page_id      Optional page ID supplied by the caller.
+		 * @return bool
+		 */
+		public function maybe_flag_translated_core_page( $is_core_page, $slug, $page_id = 0 ) {
+			if ( $is_core_page || UM()->Polylang()->is_default() ) {
+				return $is_core_page;
+			}
+
+			if ( empty( UM()->config()->permalinks[ $slug ] ) ) {
+				return $is_core_page;
+			}
+
+			$translated_page_id = pll_get_post( UM()->config()->permalinks[ $slug ], UM()->Polylang()->get_current() );
+			if ( ! $translated_page_id ) {
+				return $is_core_page;
+			}
+
+			$queried_id = get_queried_object_id();
+			if ( ! $queried_id && $page_id ) {
+				$queried_id = absint( $page_id );
+			}
+			if ( ! $queried_id ) {
+				$queried_id = absint( get_query_var( 'page_id' ) );
+			}
+			if ( ! $queried_id && isset( $_REQUEST['page_id'] ) ) {
+				$queried_id = absint( wp_unslash( $_REQUEST['page_id'] ) );
+			}
+
+			if ( $queried_id && (int) $translated_page_id === (int) $queried_id ) {
+				UM()->config()->permalinks[ $slug ] = (int) $translated_page_id;
+				return true;
+			}
+
+			return $is_core_page;
 		}
-		return $url;
-	}
+
+
+		/**
+		 * Filter account activation link.
+		 * Hook: um_activate_url
+		 *
+		 * @see \um\core\Permalinks
+		 *
+		 * @since 1.1.0
+		 *
+		 * @param string $url Account activation link.
+		 * @return string Localized account activation link.
+		 */
+		public function localize_activate_url( $url ) {
+			if ( ! UM()->Polylang()->is_default() ) {
+				$url = add_query_arg( 'lang', UM()->Polylang()->get_current(), $url );
+			}
+			return $url;
+		}
 
 
 	/**
