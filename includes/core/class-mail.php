@@ -110,10 +110,28 @@ class Mail {
 	 * @param array  $args     Arguments for sending email.
 	 */
 	public function set_user_lang( $email, $template, $args ) {
-		$user = get_user_by( 'email', $email );
-		if ( $user && ! empty( $user->locale ) ) {
-			$_GET['lang'] = substr( $user->locale, 0, 2 );
-		}
-	}
+               $language = '';
+
+               $user = get_user_by( 'email', $email );
+               if ( $user && ! empty( $user->locale ) ) {
+                       $language = substr( $user->locale, 0, 2 );
+               }
+
+               if ( empty( $language ) || 'all' === $language ) {
+                       $language = UM()->Polylang()->get_request_language();
+               }
+
+               if ( empty( $language ) || 'all' === $language ) {
+                       $language = UM()->Polylang()->get_current();
+               }
+
+               if ( empty( $language ) || 'all' === $language ) {
+                       $language = UM()->Polylang()->get_default();
+               }
+
+               if ( ! empty( $language ) && 'all' !== $language ) {
+                       $_GET['lang'] = $language;
+               }
+        }
 
 }
