@@ -482,16 +482,16 @@ class UM_Polylang {
          */
         public function is_default() {
                 $default = $this->get_default();
-                $request = $this->get_request_language();
-
-                if ( $request ) {
-                        return $request === $default;
-                }
-
                 $current = $this->get_current();
 
                 if ( $current ) {
                         return $current === $default;
+                }
+
+                $request = $this->get_request_language();
+
+                if ( $request ) {
+                        return $request === $default;
                 }
 
                 return true;
