@@ -385,9 +385,33 @@ class Permalinks {
 
                         $url = $this->get_page_url_for_language( $page_id, UM()->Polylang()->get_current() );
 
-                        if ( $updated ) {
-                                $url = add_query_arg( 'updated', esc_attr( $updated ), $url );
+                        if ( empty( $updated ) && ! is_numeric( $updated ) ) {
+                                return $url;
                         }
+
+                        if ( is_array( $updated ) ) {
+                                $query_args = array();
+
+                                foreach ( $updated as $key => $value ) {
+                                        $key = sanitize_key( $key );
+
+                                        if ( '' === $key ) {
+                                                continue;
+                                        }
+
+                                        if ( is_scalar( $value ) ) {
+                                                $query_args[ $key ] = sanitize_text_field( wp_unslash( (string) $value ) );
+                                        }
+                                }
+
+                                if ( ! empty( $query_args ) ) {
+                                        $url = add_query_arg( $query_args, $url );
+                                }
+
+                                return $url;
+                        }
+
+                        $url = add_query_arg( 'updated', sanitize_text_field( wp_unslash( (string) $updated ) ), $url );
                 }
 
                 return $url;
