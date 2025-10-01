@@ -280,6 +280,23 @@ class UM_Polylang {
 
 
         /**
+         * Override the cached request language for the current request.
+         *
+         * @since 1.2.3
+         *
+         * @param string $language Language slug to store.
+         */
+        public function set_request_language( $language ) {
+                if ( empty( $language ) || 'all' === $language ) {
+                        $this->request_language = '';
+                        return;
+                }
+
+                $this->request_language = sanitize_key( $language );
+        }
+
+
+        /**
          * Try to determine the current language from the referring URL.
          *
          * @since 1.2.3
