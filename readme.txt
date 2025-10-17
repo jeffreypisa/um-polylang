@@ -45,6 +45,14 @@ Documentation is the README section in the GitHub repository: https://github.com
 
 == Changelog ==
 
+= 1.2.4: October 1, 2025 =
+
+* Fixes:
+
+        - Restored the correct fallback order when determining the email language so password reset messages send in the right locale.
+        - Synced outgoing email translations with the active request locale, falling back to the user locale when available.
+        - Preserved reset-password query arguments when localizing Ultimate Member URLs to keep confirmation tokens intact.
+
 = 1.2.3: February 20, 2025 =
 
 * Enhancements:
